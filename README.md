@@ -8,6 +8,8 @@ CLI and server integrations.
 - **Version:** `0.1.0`
 - **GitHub:** [github.com/vigolium/vigolium](https://github.com/vigolium/vigolium)
 - **Docs:** [docs.vigolium.com](https://docs.vigolium.com/)
+- **Plugin guide:**
+  [docs.vigolium.com/getting-started/caido-plugin](https://docs.vigolium.com/getting-started/caido-plugin)
 
 This is the Caido counterpart to
 [burp-vigolium](https://github.com/vigolium/burp-vigolium). It speaks the **same bridge protocol**, so
@@ -88,6 +90,9 @@ After loading:
 2. Enter the Vigolium **Server URL** and **API Key**.
 3. Select **Test connection** and confirm the server is reachable.
 4. Use a context-menu action or one of the shortcuts to send traffic.
+
+The walkthrough with screenshots lives at
+[docs.vigolium.com/getting-started/caido-plugin](https://docs.vigolium.com/getting-started/caido-plugin).
 
 ## Build (from source)
 

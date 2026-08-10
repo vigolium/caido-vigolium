@@ -33,6 +33,11 @@ export function paletteHotkey(): string[] {
   return [IS_MAC ? "Meta" : "Control", "K"];
 }
 
+/** Caido's own binding for sending a request to Replay, mirrored by the tabs. */
+export function replayHotkey(): string[] {
+  return [IS_MAC ? "Meta" : "Control", "R"];
+}
+
 /**
  * How each key is written, per platform.
  *

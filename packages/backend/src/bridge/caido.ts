@@ -242,7 +242,14 @@ export async function openInReplay(
   collectionId?: string,
 ): Promise<string> {
   const requestId = await injectRequest(sdk, input);
-  const session = await sdk.replay.createSession(requestId, collectionId);
+  // Caido converts every argument it is handed, so an explicit `undefined`
+  // collection is not read as "no collection" - it fails the ID conversion with
+  // "Not an ID. Error converting from js 'undefined' into type 'string'". The
+  // argument has to be left off entirely, which is why this is two calls.
+  const session =
+    collectionId === undefined
+      ? await sdk.replay.createSession(requestId)
+      : await sdk.replay.createSession(requestId, collectionId);
   await renameSession(sdk, session.getId(), name);
   return session.getId();
 }

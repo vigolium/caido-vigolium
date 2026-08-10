@@ -1,25 +1,28 @@
 <script setup lang="ts">
 import Button from "primevue/button";
 import Column from "primevue/column";
+import ContextMenu from "primevue/contextmenu";
 import DataTable from "primevue/datatable";
 import InputText from "primevue/inputtext";
 import Splitter from "primevue/splitter";
 import SplitterPanel from "primevue/splitterpanel";
 import Tag from "primevue/tag";
 import { computed, onMounted, ref } from "vue";
-import { errorMessage, type HttpRecord } from "shared";
+import { type HttpRecord } from "shared";
 import { useSDK } from "../sdk";
 import { decodeBase64ToText, formatBytes, formatTimestamp, statusSeverity } from "../lib/format";
 import { usePagedList } from "../lib/paged";
+import { usePageHotkey } from "../lib/page-hotkey";
+import { useRowActions } from "../lib/row-actions";
+import { formatHotkey, replayHotkey } from "../lib/platform";
 import HttpMessageView from "./HttpMessageView.vue";
 import PageToolbar from "./PageToolbar.vue";
 
 const sdk = useSDK();
 
+const root = ref<HTMLElement>();
+const menu = ref<InstanceType<typeof ContextMenu>>();
 const selected = ref<HttpRecord | undefined>();
-const notice = ref("");
-/** Errors from the row actions, which are not part of loading the page. */
-const actionError = ref("");
 
 const filters = ref({
   search: "",
@@ -48,8 +51,8 @@ const page = usePagedList<HttpRecord>(({ limit, offset, sort }) => {
   });
 });
 const records = page.items;
+const { notice, error, run } = useRowActions(page.error);
 
-const error = computed(() => page.error.value || actionError.value);
 const requestText = computed(() => decodeBase64ToText(selected.value?.rawRequestBase64 ?? ""));
 const responseText = computed(() => decodeBase64ToText(selected.value?.rawResponseBase64 ?? ""));
 
@@ -60,16 +63,6 @@ async function onSelect(record: HttpRecord) {
     await run(async () => {
       selected.value = await sdk.backend.httpRecordByUuid(record.uuid);
     });
-  }
-}
-
-/** Runs a row action, reporting failure in place of the last notice. */
-async function run(action: () => Promise<void>): Promise<void> {
-  actionError.value = "";
-  try {
-    await action();
-  } catch (e) {
-    actionError.value = errorMessage(e);
   }
 }
 
@@ -101,12 +94,67 @@ async function deleteSelected() {
   });
 }
 
+async function copyUrl() {
+  const record = selected.value;
+  if (!record) return;
+  await run(async () => {
+    await navigator.clipboard.writeText(record.url);
+    notice.value = "URL copied";
+  });
+}
+
+// --------------------------------------------------------- Menu and shortcut
+
+const menuItems = computed(() => [
+  {
+    // PrimeVue's menu renders no shortcut column, so the binding is spelled
+    // into the label - an unadvertised shortcut is one nobody finds.
+    label: `Send to Replay  ${formatHotkey(replayHotkey())}`,
+    icon: "fas fa-paper-plane",
+    disabled: !selected.value,
+    command: replaySelected,
+  },
+  {
+    label: "Scan",
+    icon: "fas fa-shield-halved",
+    disabled: !selected.value,
+    command: scanSelected,
+  },
+  { label: "Copy URL", icon: "fas fa-copy", disabled: !selected.value, command: copyUrl },
+  { separator: true },
+  { label: "Delete", icon: "fas fa-trash-can", disabled: !selected.value, command: deleteSelected },
+]);
+
+/**
+ * Right-clicking a row acts on that row, so it is opened first.
+ *
+ * `ContextMenu.show` stops propagation but does not prevent the default, and
+ * the table only suppresses the native menu when its own `contextMenu` prop is
+ * set - which would take over row selection as well.
+ */
+async function onRowContextMenu(event: { originalEvent: MouseEvent; data: HttpRecord }) {
+  event.originalEvent.preventDefault();
+  if (selected.value?.uuid !== event.data.uuid) await onSelect(event.data);
+  menu.value?.show(event.originalEvent);
+}
+
+function onDetailContextMenu(event: MouseEvent) {
+  if (!selected.value) return;
+  menu.value?.show(event);
+}
+
+usePageHotkey("r", root, () => {
+  if (!selected.value) return false;
+  void replaySelected();
+  return true;
+});
+
 defineExpose({ refresh: page.load });
 onMounted(page.load);
 </script>
 
 <template>
-  <div class="vg-tab">
+  <div ref="root" class="vg-tab">
     <div class="vg-filters">
       <InputText
         v-model="filters.search"
@@ -183,6 +231,7 @@ onMounted(page.load);
           class="vg-table"
           @row-select="onSelect($event.data)"
           @row-unselect="selected = undefined"
+          @row-contextmenu="onRowContextMenu"
           @sort="page.onSort"
         >
           <Column field="method" header="Method" sortable style="width: 6rem" />
@@ -238,9 +287,15 @@ onMounted(page.load);
               <Button size="small" severity="danger" text label="Delete" @click="deleteSelected" />
             </div>
           </div>
-          <HttpMessageView :request="requestText" :response="responseText" />
+          <HttpMessageView
+            :request="requestText"
+            :response="responseText"
+            @contextmenu="onDetailContextMenu"
+          />
         </div>
       </SplitterPanel>
     </Splitter>
+
+    <ContextMenu ref="menu" :model="menuItems" />
   </div>
 </template>

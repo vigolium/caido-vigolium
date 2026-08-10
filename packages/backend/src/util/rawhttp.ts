@@ -41,6 +41,58 @@ export function parseStatusCode(bytes: Uint8Array): number {
   return match?.[1] ? Number(match[1]) : 0;
 }
 
+/** The `Host` header, or "" when the message carries none. */
+export function parseHostHeader(bytes: Uint8Array): string {
+  const head = toLatin1(bytes, 8192);
+  // Stop at the blank line: a body may well contain something that looks like a
+  // header, and only the real ones name the target.
+  const headers = head.split(/\r?\n\r?\n/, 1)[0] ?? "";
+  const match = /^host:[ \t]*(\S+)[ \t]*$/im.exec(headers);
+  return match?.[1] ?? "";
+}
+
+/**
+ * The absolute URL a stored raw request was aimed at.
+ *
+ * Evidence carries the message but not the connection it was made over, so the
+ * authority has to be recovered from the `Host` header and the scheme from
+ * whatever the caller already knows - a finding's `matchedAt`, say, which may
+ * equally be a source-file path and no help at all. Each half therefore falls
+ * back to the other, and an absolute request-target, being unambiguous, wins
+ * over both.
+ */
+export function deriveRequestUrl(bytes: Uint8Array, hint: string): string {
+  const { path, query } = parseRequestLine(bytes);
+  const suffix = query ? `${path}?${query}` : path;
+
+  if (/^https?:\/\//i.test(path)) return suffix;
+
+  const hinted = parseHint(hint);
+  const host = parseHostHeader(bytes);
+  if (!host) {
+    if (!hinted) throw new Error("Cannot tell where this request was sent: no Host header");
+    return `${hinted.origin}${suffix}`;
+  }
+
+  // An explicit default port is the strongest signal about the scheme, ahead of
+  // a hint that may describe a different endpoint entirely.
+  const scheme = host.endsWith(":80")
+    ? "http"
+    : host.endsWith(":443")
+      ? "https"
+      : (hinted?.protocol.replace(":", "") ?? "https");
+  return `${scheme}://${host}${suffix}`;
+}
+
+function parseHint(hint: string): URL | undefined {
+  try {
+    const parsed = new URL(hint);
+    return parsed.protocol === "http:" || parsed.protocol === "https:" ? parsed : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 export type TargetInfo = {
   host: string;
   port: number;

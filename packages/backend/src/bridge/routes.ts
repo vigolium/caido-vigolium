@@ -43,6 +43,20 @@ export const MAX_REPEATER_BODY_BYTES = 2 * 1024 * 1024;
 const DEFAULT_SEND_TIMEOUT_MS = 30_000;
 const MAX_SEND_TIMEOUT_MS = 120_000;
 
+/*
+ * A note on logging, which these routes deliberately do almost none of.
+ *
+ * A scan drives /send, /sitemap, /repeater and /organizer once per request it
+ * makes, so a line each - however terse - buries every other plugin's logs
+ * under a few thousand entries nobody reads. What the line would have said is
+ * already somewhere better: the caller gets it in the reply, and the traffic
+ * itself lands in Caido's own Sitemap and Replay.
+ *
+ * Failures are the exception, being rare and worth interrupting for. Most
+ * arrive here as a throw and are logged centrally by the service; a send that
+ * comes back unsent is not one of those, so it logs where it happens.
+ */
+
 const SCOPE_BLOCKED_MESSAGE =
   "target is out of Caido scope; disable in-scope-only or add it to the project scope";
 
@@ -210,7 +224,6 @@ export async function sitemap(ctx: RouteContext, args: Json): Promise<Json> {
     source,
   });
   await addToSitemap(ctx.sdk, requestId);
-  ctx.log.info(`[Bridge] Added 1 item to the Sitemap from ${source}`);
 
   return {
     added: 1,
@@ -267,7 +280,6 @@ export async function repeater(ctx: RouteContext, args: Json): Promise<Json> {
     },
     tabName,
   );
-  ctx.log.info(`[Bridge] Opened Replay session "${tabName}"`);
 
   const output: Json = {
     sent: 1,
@@ -324,11 +336,11 @@ export async function send(ctx: RouteContext, args: Json): Promise<Json> {
     output.added_to_sitemap = false;
   }
 
-  ctx.log.info(
-    outcome.sent
-      ? `[Bridge] Sent 1 request via Caido to ${resolved.url} (HTTP ${outcome.statusCode})`
-      : `[Bridge] Send via Caido to ${resolved.url} failed: ${outcome.error ?? "unknown"}`,
-  );
+  if (!outcome.sent) {
+    ctx.log.warn(
+      `[Bridge] Send via Caido to ${resolved.url} failed: ${outcome.error ?? "unknown"}`,
+    );
+  }
   return output;
 }
 
@@ -394,7 +406,6 @@ export async function organizer(ctx: RouteContext, args: Json): Promise<Json> {
     notes || source,
     collectionId,
   );
-  ctx.log.info(`[Bridge] Added 1 item to Replay collection "${collectionName}" from ${source}`);
 
   const output: Json = {
     added: 1,

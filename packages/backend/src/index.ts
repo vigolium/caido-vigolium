@@ -25,7 +25,8 @@ import { openInReplay } from "./bridge/caido";
 import { BridgeService } from "./bridge/service";
 import { RequestCounters } from "./counters";
 import { publish } from "./events";
-import { fromBase64 } from "./util/bytes";
+import { fromBase64, fromUtf8 } from "./util/bytes";
+import { deriveRequestUrl } from "./util/rawhttp";
 import { LogService } from "./logging";
 import { ProxyForwarder } from "./proxy/forwarder";
 import { SettingsStore, blankToNull, splitModules } from "./settings";
@@ -245,6 +246,44 @@ async function sendRecordToReplay(sdk: SDK, uuid: string): Promise<string> {
 }
 
 /**
+ * Opens a raw message in Caido Replay - a finding's evidence, which has no
+ * stored record behind it to look up.
+ *
+ * `urlHint` is the caller's best guess at the target, typically a finding's
+ * `matchedAt`. It is only a hint because that field is not always a URL at all:
+ * an agent finding matches a source file. The message itself is the better
+ * authority, so the two are reconciled rather than one being trusted outright.
+ */
+async function sendRawToReplay(
+  sdk: SDK,
+  urlHint: string,
+  request: string,
+  response: string,
+  name: string,
+): Promise<string> {
+  const { log } = required();
+  const requestBytes = fromUtf8(request);
+  if (requestBytes.length === 0) {
+    throw new VigoliumApiError(0, "There is no request to replay");
+  }
+
+  const url = deriveRequestUrl(requestBytes, urlHint);
+  const responseBytes = response ? fromUtf8(response) : null;
+  const sessionId = await openInReplay(
+    sdk,
+    {
+      url,
+      requestBytes,
+      responseBytes: responseBytes && responseBytes.length > 0 ? responseBytes : null,
+      source: "vigolium-evidence",
+    },
+    name || "vigolium",
+  );
+  log.info(`[Findings] Opened Replay session for ${url}`);
+  return sessionId;
+}
+
+/**
  * The RPC surface, declared once.
  *
  * `DefineAPI` maps over this record, so the type and the registration loop below
@@ -284,6 +323,7 @@ const HANDLERS = {
   agentSessions,
   agentSessionLogs,
   sendRecordToReplay,
+  sendRawToReplay,
 };
 
 export type API = DefineAPI<typeof HANDLERS>;

@@ -5,7 +5,7 @@ resulting findings, and synchronizing traffic in both directions. It supports ex
 Caido, automatic Proxy forwarding, Sitemap snapshots, and an optional loopback-only live bridge for
 CLI and server integrations.
 
-- **Version:** `0.1.0`
+- **Version:** `0.1.1`
 - **GitHub:** [github.com/vigolium/vigolium](https://github.com/vigolium/vigolium)
 - **Docs:** [docs.vigolium.com](https://docs.vigolium.com/)
 - **Plugin guide:**
@@ -161,6 +161,29 @@ every stored record using these options.
 Every binding is also a command: open the palette with `⌘K` / `Ctrl+K` and search for **Vigolium**.
 The context-menu actions on a request row, request pane or response pane do the same thing without
 a keyboard.
+
+Those five bindings push Caido's own traffic into Vigolium, so they act on whatever Caido has
+selected - a row in HTTP History, Search, Sitemap or Replay - and report `nothing selected to send`
+anywhere else. They cannot read a selection inside the Vigolium page itself: Caido builds a
+command's page context from a fixed list of its own routes, and a plugin page contributes none.
+
+The plugin's own views therefore carry their own bindings and menus, which work only while that view
+is on screen:
+
+| Where                     | Action                                                                                |
+| ------------------------- | ------------------------------------------------------------------------------------- |
+| HTTP Records row or panes | Right-click for Send to Replay, Scan, Copy URL, Delete                                |
+| Findings row or evidence  | Right-click for Send to Replay, Copy as Markdown, Copy request, Copy response, Delete |
+| Either tab                | `⌘R` / `Ctrl+R` sends the open record - or the evidence on screen - to Replay         |
+
+A finding's evidence is stored text with no request behind it, so replaying it re-imports the
+message. The target is recovered from the message's own `Host` header, with the finding's
+`matchedAt` supplying only the scheme - an absolute request target wins over both, and an agent
+finding, whose `matchedAt` is a source path, still replays as long as the message carries a `Host`.
+
+Right-click does nothing on these views in stock Caido. Its `RequestRow`, `Request` and `Response`
+menus are attached by Caido's own tables and request panes; `sdk.ui.httpRequestEditor()` hands a
+plugin a bare editor with no menu wiring, so the plugin has to supply its own.
 
 The Burp extension's `Ctrl+Alt+…` bindings carry over on Windows and Linux. macOS uses `⌘⌃`
 instead, because `Alt` there is the Option dead-key - the OS turns `Alt+V` into `√` before Caido

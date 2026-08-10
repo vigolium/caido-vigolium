@@ -116,7 +116,8 @@ async function setFilterRules(rules: FilterRule[]) {
       <p class="vg-hint">
         Serves the Vigolium bridge protocol on a loopback port so
         <code>--burp-bridge-url</code> commands can read this project's traffic and write back into
-        it. Unauthenticated, loopback-only, and off by default.
+        it. On by default, and unauthenticated - so it binds to loopback only and checks the Host
+        and Origin of every request. Turn it off here if you would rather opt in per session.
       </p>
       <div class="vg-row">
         <label class="vg-check">

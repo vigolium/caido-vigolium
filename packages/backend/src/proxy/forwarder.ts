@@ -63,8 +63,12 @@ export class ProxyForwarder {
           http_request_base64: requestBase64,
           http_response_base64: responseBase64,
         });
+        // Deliberately silent on success: this runs once per proxied response,
+        // so a line each would bury every other plugin's logs. The counters
+        // already carry the sent/failed tally to the Settings tab, which is
+        // where a per-request rate belongs. Failures still log - they are rare,
+        // and each one is a request Vigolium never saw.
         this.#counters.markSent();
-        this.#log.info("[Proxy] Sent 1 request");
       } catch (e) {
         this.#counters.markFailed();
         this.#log.error(`[Proxy] Request failed: ${errorMessage(e)}`);

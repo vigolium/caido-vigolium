@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import Button from "primevue/button";
 import Column from "primevue/column";
+import ContextMenu from "primevue/contextmenu";
 import DataTable from "primevue/datatable";
 import InputText from "primevue/inputtext";
 import Select from "primevue/select";
@@ -17,12 +18,17 @@ import { SEVERITY_LABELS, parseEvidence, type Finding, type Severity } from "sha
 import { useSDK } from "../sdk";
 import { SEVERITY_OPTIONS, formatTimestamp, severitySeverity } from "../lib/format";
 import { usePagedList } from "../lib/paged";
+import { usePageHotkey } from "../lib/page-hotkey";
+import { useRowActions } from "../lib/row-actions";
+import { formatHotkey, replayHotkey } from "../lib/platform";
 import { copyToClipboard, downloadFile, findingToMarkdown, findingsToJson } from "../lib/markdown";
 import HttpMessageView from "./HttpMessageView.vue";
 import PageToolbar from "./PageToolbar.vue";
 
 const sdk = useSDK();
 
+const root = ref<HTMLElement>();
+const menu = ref<InstanceType<typeof ContextMenu>>();
 const selected = ref<Finding | undefined>();
 const showDescription = ref(false);
 const evidenceTab = ref("primary");
@@ -53,6 +59,7 @@ const page = usePagedList<Finding>(({ limit, offset, sort }) =>
   }),
 );
 const findings = page.items;
+const { notice, error, run } = useRowActions(page.error);
 
 /** Primary request/response plus each additional evidence pair, as tabs. */
 const evidencePanes = computed(() => {
@@ -89,6 +96,102 @@ async function copyMarkdown() {
   await copyToClipboard(findingToMarkdown(selected.value));
 }
 
+// --------------------------------------------------------------- Row actions
+
+/** The evidence pair on screen, which is what the copy items act on. */
+const activePane = computed(
+  () =>
+    evidencePanes.value.find((pane) => pane.key === evidenceTab.value) ?? evidencePanes.value[0],
+);
+
+async function deleteSelected() {
+  const finding = selected.value;
+  if (!finding) return;
+  await run(async () => {
+    await sdk.backend.deleteFinding(finding.id);
+    selected.value = undefined;
+    await page.load();
+  });
+}
+
+/**
+ * Sends the evidence on screen to Caido's Replay.
+ *
+ * Evidence is raw text with no stored record behind it, so this goes through
+ * the raw entry point rather than the by-uuid one the HTTP Records tab uses.
+ * `matchedAt` is passed only as a hint: for an agent finding it is a source
+ * file path, and the backend reconciles it against the message's own Host.
+ */
+async function replaySelected() {
+  const finding = selected.value;
+  const pane = activePane.value;
+  if (!finding || !pane?.request) return;
+  await run(async () => {
+    await sdk.backend.sendRawToReplay(
+      finding.matchedAt[0] ?? "",
+      pane.request,
+      pane.response ?? "",
+      `vigolium-${finding.moduleId || finding.moduleName || finding.id}`,
+    );
+    notice.value = "Opened in Replay";
+  });
+}
+
+const menuItems = computed(() => [
+  {
+    // PrimeVue's menu renders no shortcut column, so the binding is spelled
+    // into the label - an unadvertised shortcut is one nobody finds.
+    label: `Send to Replay  ${formatHotkey(replayHotkey())}`,
+    icon: "fas fa-paper-plane",
+    disabled: !activePane.value?.request,
+    command: replaySelected,
+  },
+  {
+    label: "Copy as Markdown",
+    icon: "fas fa-copy",
+    disabled: !selected.value,
+    command: copyMarkdown,
+  },
+  {
+    label: "Copy request",
+    icon: "fas fa-arrow-up",
+    disabled: !activePane.value?.request,
+    command: () => run(() => copyToClipboard(activePane.value?.request ?? "")),
+  },
+  {
+    label: "Copy response",
+    icon: "fas fa-arrow-down",
+    disabled: !activePane.value?.response,
+    command: () => run(() => copyToClipboard(activePane.value?.response ?? "")),
+  },
+  { separator: true },
+  { label: "Delete", icon: "fas fa-trash-can", disabled: !selected.value, command: deleteSelected },
+]);
+
+/**
+ * Right-clicking a row acts on that row, so it is opened first.
+ *
+ * `ContextMenu.show` stops propagation but does not prevent the default, and
+ * the table only suppresses the native menu when its own `contextMenu` prop is
+ * set - which would take over row selection as well.
+ */
+async function onRowContextMenu(event: { originalEvent: MouseEvent; data: Finding }) {
+  event.originalEvent.preventDefault();
+  if (selected.value?.id !== event.data.id) await onSelect(event.data);
+  menu.value?.show(event.originalEvent);
+}
+
+function onEvidenceContextMenu(event: MouseEvent) {
+  if (!selected.value) return;
+  menu.value?.show(event);
+}
+
+usePageHotkey("r", root, () => {
+  if (!activePane.value?.request) return false;
+  void replaySelected();
+  return true;
+});
+
 function exportJson() {
   downloadFile("vigolium-findings.json", findingsToJson(findings.value), "application/json");
 }
@@ -103,7 +206,7 @@ onMounted(page.load);
 </script>
 
 <template>
-  <div class="vg-tab">
+  <div ref="root" class="vg-tab">
     <div class="vg-filters">
       <InputText
         v-model="filters.search"
@@ -166,7 +269,8 @@ onMounted(page.load);
       @update:limit="page.setLimit"
     />
 
-    <p v-if="page.error.value" class="vg-error">{{ page.error.value }}</p>
+    <p v-if="error" class="vg-error">{{ error }}</p>
+    <p v-else-if="notice" class="vg-notice">{{ notice }}</p>
 
     <Splitter layout="vertical" class="vg-splitter">
       <SplitterPanel :size="45" :min-size="20">
@@ -185,6 +289,7 @@ onMounted(page.load);
           class="vg-table"
           @row-select="onSelect($event.data)"
           @row-unselect="selected = undefined"
+          @row-contextmenu="onRowContextMenu"
           @sort="page.onSort"
         >
           <Column field="severity" header="Severity" sortable style="width: 8rem">
@@ -263,7 +368,11 @@ onMounted(page.load);
             </TabList>
             <TabPanels>
               <TabPanel v-for="pane in evidencePanes" :key="pane.key" :value="pane.key">
-                <HttpMessageView :request="pane.request" :response="pane.response" />
+                <HttpMessageView
+                  :request="pane.request"
+                  :response="pane.response"
+                  @contextmenu="onEvidenceContextMenu"
+                />
               </TabPanel>
             </TabPanels>
           </Tabs>
@@ -272,9 +381,12 @@ onMounted(page.load);
             v-else-if="evidencePanes[0]"
             :request="evidencePanes[0].request"
             :response="evidencePanes[0].response"
+            @contextmenu="onEvidenceContextMenu"
           />
         </div>
       </SplitterPanel>
     </Splitter>
+
+    <ContextMenu ref="menu" :model="menuItems" />
   </div>
 </template>

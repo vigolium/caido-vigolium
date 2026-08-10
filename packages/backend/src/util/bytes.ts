@@ -48,3 +48,14 @@ export function toLatin1(bytes: Uint8Array, maxBytes?: number): string {
 export function fromLatin1(value: string): Uint8Array {
   return new Uint8Array(Buffer.from(value, "latin1"));
 }
+
+/**
+ * UTF-8, for text that reached us as text.
+ *
+ * A finding's evidence arrives decoded inside a JSON document rather than as
+ * bytes, so latin-1 - correct for a message carried through the editor - would
+ * flatten every multi-byte character it picked up on the way.
+ */
+export function fromUtf8(value: string): Uint8Array {
+  return new Uint8Array(Buffer.from(value, "utf8"));
+}

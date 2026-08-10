@@ -1,0 +1,16 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "jsx": "preserve",
+    // The `backend` alias pulls backend sources into this program for its API
+    // type, so the backend's ambient `caido:*` and LLRT modules must resolve here too.
+    "types": ["@caido/sdk-backend"],
+    "paths": {
+      "shared": ["../shared/src/index.ts"],
+      "backend": ["../backend/src/index.ts"],
+      "@/*": ["./src/*"]
+    }
+  },
+  "include": ["src/**/*.ts", "src/**/*.vue"]
+}

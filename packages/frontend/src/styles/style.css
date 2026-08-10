@@ -1,0 +1,482 @@
+/*
+ * Layout only. Colours, spacing tokens and typography come from Caido's own
+ * theme variables so the plugin follows light/dark without a second palette.
+ *
+ * PrimeVue runs unstyled here (see index.ts), and under `unstyled: true` its
+ * `cx()` returns undefined for every component - so no `p-tabpanels`,
+ * `p-tabpanel` or `p-splitterpanel` class is ever emitted and any rule keyed on
+ * one silently matches nothing. What every component *does* emit, styled or
+ * not, is `data-pc-name` / `data-pc-section`, so the layout hooks those.
+ */
+
+.vg-root,
+.vg-app {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.vg-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  height: 100%;
+  color: var(--c-text-secondary, inherit);
+}
+
+.vg-tabs,
+.vg-subtabs,
+.vg-evidence-tabs {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+/*
+ * The panel container carries the height of the page. Left at its natural
+ * `flex: 0 1 auto` it grows with its content instead of filling the tab strip,
+ * which is what pushed every split view's bottom pane off the bottom of the
+ * window with no way to scroll to it.
+ */
+.vg-tabs > [data-pc-name="tabpanels"],
+.vg-subtabs > [data-pc-name="tabpanels"],
+.vg-evidence-tabs > [data-pc-name="tabpanels"] {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+/* Column, because a panel may stack a toolbar above its content. */
+.vg-tabs [data-pc-name="tabpanel"],
+.vg-subtabs [data-pc-name="tabpanel"],
+.vg-evidence-tabs [data-pc-name="tabpanel"] {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.vg-tab {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  gap: 0.5rem;
+  min-height: 0;
+  padding: 0.75rem;
+}
+
+.vg-tab--scroll {
+  overflow-y: auto;
+  gap: 1rem;
+}
+
+/* Filters and toolbars ---------------------------------------------------- */
+
+.vg-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.vg-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.vg-toolbar__spacer {
+  flex: 1;
+}
+
+.vg-toolbar__range {
+  font-size: 0.85em;
+  opacity: 0.75;
+}
+
+.vg-toolbar__size {
+  width: 5.5rem;
+}
+
+/* Split panes ------------------------------------------------------------- */
+
+.vg-splitter {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  border: none;
+}
+
+/*
+ * `min-height: 0` is the load-bearing part: a flex item defaults to
+ * `min-height: auto`, so the table pane refuses to shrink below its full row
+ * count and shoves the detail pane out of the splitter entirely. Percentage
+ * `flex-basis` (which Splitter sets inline from the `size` props) only resolves
+ * once the panes can actually be sized by the splitter.
+ */
+.vg-splitter > [data-pc-name="splitterpanel"] {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* Record tables ----------------------------------------------------------- */
+
+/*
+ * Row density matched to Caido's own Sitemap and HTTP History tables: one line
+ * per row, and horizontal scrolling rather than wrapping.
+ *
+ * The height is stated outright rather than built up from padding, because
+ * padding only sets a floor - the tallest thing on the line still wins, and in
+ * these tables that is the severity chip rather than the text beside it. Caido
+ * does the same thing for the same reason: its rows carry a fixed height and
+ * centre their cells inside it.
+ *
+ * 1.25rem is a row pitch tighter than Caido's own 1.5rem, border included. The
+ * floor is the 1.2 line box below - 16.8px at the default 14px font, plus the
+ * border - so there is a little over 2px of slack left at this size. Going
+ * further means shrinking the text, not the row.
+ *
+ * These override the preset's Tailwind utilities on specificity alone; no
+ * `!important` needed.
+ */
+.vg-table th,
+.vg-table td {
+  height: 1.25rem;
+  padding: 0 0.5rem;
+  line-height: 1.2;
+}
+
+/*
+ * Wrapping is what actually costs the rows their height, since one long URL
+ * turns a row into three. Caido scrolls sideways instead, and the cap keeps a
+ * single outlier column from squeezing every other one to nothing.
+ */
+.vg-table td {
+  max-width: 32rem;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/*
+ * Trimmed to the same line box as the text beside it. Left at the preset's
+ * `py-1`, the chip is taller than the row it sits in and stretches every row
+ * carrying one - which is every row in Findings.
+ */
+.vg-table td [data-pc-name="tag"] {
+  padding: 0 0.35rem;
+  line-height: 1.4;
+  font-weight: 600;
+}
+
+/* Detail pane ------------------------------------------------------------- */
+
+.vg-detail {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  gap: 0.5rem;
+  padding-top: 0.5rem;
+}
+
+.vg-detail__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.vg-detail__header h3 {
+  margin: 0 0 0.25rem;
+  font-size: 1rem;
+}
+
+.vg-detail__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8em;
+  opacity: 0.75;
+}
+
+.vg-detail__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.vg-detail__description {
+  margin: 0;
+  padding: 0.5rem 0.75rem;
+  border-radius: 4px;
+  background: var(--c-bg-subtle, rgba(127, 127, 127, 0.08));
+  white-space: pre-wrap;
+}
+
+/* Request / response viewer ---------------------------------------------- */
+
+.vg-message-view {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+  flex: 1;
+  min-height: 0;
+}
+
+.vg-message-pane {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+}
+
+.vg-message-pane__title {
+  font-size: 0.75em;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  opacity: 0.7;
+  padding-bottom: 0.25rem;
+}
+
+.vg-message-pane__editor {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  border: 1px solid var(--c-border, rgba(127, 127, 127, 0.25));
+  border-radius: 4px;
+}
+
+.vg-message-pane__editor > * {
+  height: 100%;
+}
+
+/* Cards (Bridge / Settings) ---------------------------------------------- */
+
+.vg-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--c-border, rgba(127, 127, 127, 0.25));
+  border-radius: 6px;
+}
+
+.vg-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.vg-card__header h3 {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.vg-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem;
+}
+
+.vg-inline,
+.vg-check {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.9em;
+}
+
+.vg-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.vg-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.85em;
+}
+
+.vg-version {
+  font-size: 0.8em;
+  opacity: 0.6;
+}
+
+.vg-status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.82em;
+  opacity: 0.85;
+}
+
+.vg-status__counts {
+  font-variant-numeric: tabular-nums;
+}
+
+.vg-message {
+  margin: 0;
+}
+
+/* Stats ------------------------------------------------------------------- */
+
+.vg-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2rem;
+}
+
+.vg-stats__group {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.vg-stats__group h4 {
+  margin: 0 0.25rem 0 0;
+  font-size: 0.85em;
+  opacity: 0.8;
+}
+
+.vg-hotkeys {
+  border-collapse: collapse;
+  font-size: 0.85em;
+}
+
+.vg-hotkeys td {
+  padding: 0.2rem 1.5rem 0.2rem 0;
+}
+
+/* Filter rules ------------------------------------------------------------ */
+
+.vg-rules {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+}
+
+.vg-rules__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 8rem;
+}
+
+.vg-rules__table {
+  flex: 1;
+  min-width: 0;
+}
+
+.vg-rules__table th,
+.vg-rules__table td {
+  white-space: nowrap;
+}
+
+/*
+ * The condition is the one cell allowed to wrap, and it has to be `anywhere`
+ * rather than `break-word`: a filter condition is a single unbreakable token
+ * (`woff|woff2|ttf|…`), and only `anywhere` lets it shrink the column's
+ * min-content width. Without it that one token sizes the whole table - the
+ * label columns get squeezed until "File extension" wraps onto two lines, and
+ * the table still runs off the right edge of the card it sits in.
+ */
+.vg-rules__table .vg-rules__condition {
+  max-width: 28rem;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+/* Logs -------------------------------------------------------------------- */
+
+.vg-log-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.8rem;
+}
+
+.vg-log-line {
+  display: grid;
+  grid-template-columns: 12rem 4rem 1fr;
+  gap: 0.5rem;
+  padding: 0.1rem 0;
+  border-bottom: 1px solid var(--c-border, rgba(127, 127, 127, 0.12));
+}
+
+.vg-log-line__time {
+  opacity: 0.6;
+}
+
+.vg-log-line[data-level="WARN"] .vg-log-line__level {
+  color: var(--c-warning, #d08700);
+}
+
+.vg-log-line[data-level="ERROR"] .vg-log-line__level {
+  color: var(--c-danger, #d64545);
+}
+
+.vg-logs {
+  flex: 1;
+  min-height: 0;
+  margin: 0;
+  padding: 0.5rem;
+  overflow: auto;
+  white-space: pre-wrap;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.8rem;
+  border: 1px solid var(--c-border, rgba(127, 127, 127, 0.25));
+  border-radius: 4px;
+}
+
+/* Messages ---------------------------------------------------------------- */
+
+.vg-error,
+.vg-notice,
+.vg-hint {
+  margin: 0;
+  font-size: 0.85em;
+}
+
+.vg-error {
+  color: var(--c-danger, #d64545);
+}
+
+.vg-notice {
+  color: var(--c-success, #3d9970);
+}
+
+.vg-hint {
+  opacity: 0.7;
+}
+
+.vg-empty {
+  opacity: 0.6;
+  font-size: 0.9em;
+}
+
+.vg-empty--pane {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  padding: 2rem;
+}

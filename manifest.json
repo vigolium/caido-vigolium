@@ -1,0 +1,30 @@
+{
+  "id": "vigolium",
+  "name": "Vigolium",
+  "version": "0.1.0",
+  "description": "Send Caido traffic to the Vigolium scanning engine, review findings, and bridge traffic in both directions with the Vigolium CLI and server.",
+  "author": {
+    "name": "Vigolium",
+    "email": "jessie@vigolium.com",
+    "url": "https://github.com/vigolium/vigolium"
+  },
+  "plugins": [
+    {
+      "kind": "frontend",
+      "id": "vigolium-frontend",
+      "name": "Vigolium",
+      "entrypoint": "frontend/script.js",
+      "style": "frontend/style.css",
+      "backend": {
+        "id": "vigolium-backend"
+      }
+    },
+    {
+      "kind": "backend",
+      "id": "vigolium-backend",
+      "name": "Vigolium Backend",
+      "runtime": "javascript",
+      "entrypoint": "backend/script.js"
+    }
+  ]
+}

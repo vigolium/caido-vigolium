@@ -181,7 +181,13 @@ function coerce(stored: Record<string, unknown>): VigoliumSettings {
     proxyFilterRules: filterRules(stored.proxyFilterRules),
 
     snapshotAutoEnabled: pickBoolean(stored, "snapshotAutoEnabled", d.snapshotAutoEnabled),
-    snapshotIntervalMinutes: int(stored, "snapshotIntervalMinutes", d.snapshotIntervalMinutes, 1, 1440),
+    snapshotIntervalMinutes: int(
+      stored,
+      "snapshotIntervalMinutes",
+      d.snapshotIntervalMinutes,
+      1,
+      1440,
+    ),
     snapshotInScopeOnly: pickBoolean(stored, "snapshotInScopeOnly", d.snapshotInScopeOnly),
 
     bridgeEnabled: pickBoolean(stored, "bridgeEnabled", d.bridgeEnabled),

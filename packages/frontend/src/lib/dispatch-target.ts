@@ -106,8 +106,7 @@ function selectedIds(selection: Selection | undefined): string[] {
  */
 export function pageSelectionIds(sdk: TargetSources): string[] {
   const page = sdk.window.getContext()?.page as
-    | { kind?: string; selection?: Selection; requestSelection?: Selection }
-    | undefined;
+    { kind?: string; selection?: Selection; requestSelection?: Selection } | undefined;
   if (!page) return [];
 
   if (page.kind === "Replay") {

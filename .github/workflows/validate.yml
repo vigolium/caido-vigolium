@@ -1,0 +1,50 @@
+name: ✅ Validate
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+env:
+  NODE_VERSION: 22
+
+jobs:
+  validate:
+    name: Validate
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout project
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Test
+        run: pnpm test
+
+      # Proves the packaged artifact the store consumes is actually produced,
+      # so a broken package is caught here rather than during a release.
+      - name: Build package
+        run: pnpm build
+
+      - name: Verify package contents
+        run: |
+          test -f dist/plugin_package.zip
+          unzip -l dist/plugin_package.zip
+          unzip -p dist/plugin_package.zip manifest.json | jq -e '.id and .version and .plugins'

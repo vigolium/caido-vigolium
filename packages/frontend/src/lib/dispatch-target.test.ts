@@ -96,22 +96,28 @@ describe("targetUrl", () => {
   });
 
   it("keeps a non-default port and the query", () => {
-    expect(targetUrl({ host: "example.com", port: 8443, isTls: true, path: "/a", query: "b=1" })).toBe(
-      "https://example.com:8443/a?b=1",
-    );
+    expect(
+      targetUrl({ host: "example.com", port: 8443, isTls: true, path: "/a", query: "b=1" }),
+    ).toBe("https://example.com:8443/a?b=1");
   });
 });
 
 describe("pageSelectionIds", () => {
   it("reads a multi-row HTTP history selection", () => {
-    const sdk = sources({ page: { kind: "HTTPHistory", selection: selected("406", "405", "404") } });
+    const sdk = sources({
+      page: { kind: "HTTPHistory", selection: selected("406", "405", "404") },
+    });
     expect(pageSelectionIds(sdk)).toEqual(["406", "405", "404"]);
   });
 
   // Sitemap has two selections; only the request one can be dispatched.
   it("prefers the Sitemap's request selection over its entry selection", () => {
     const sdk = sources({
-      page: { kind: "Sitemap", entrySelection: selected("node-1"), requestSelection: selected("9") },
+      page: {
+        kind: "Sitemap",
+        entrySelection: selected("node-1"),
+        requestSelection: selected("9"),
+      },
     });
     expect(pageSelectionIds(sdk)).toEqual(["9"]);
   });
@@ -136,7 +142,9 @@ describe("pageSelectionIds", () => {
   });
 
   it("returns nothing when the page has no selection", () => {
-    expect(pageSelectionIds(sources({ page: { kind: "HTTPHistory", selection: { kind: "Empty" } } }))).toEqual([]);
+    expect(
+      pageSelectionIds(sources({ page: { kind: "HTTPHistory", selection: { kind: "Empty" } } })),
+    ).toEqual([]);
     expect(pageSelectionIds(sources({}))).toEqual([]);
   });
 });

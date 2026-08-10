@@ -7,7 +7,12 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "..");
 const DIST = path.join(ROOT, "dist");
 
-// The installable package lives at the repo root and is committed, mirroring
+// The Caido store requires the release asset to be named exactly
+// `plugin_package.zip` (plus a detached `plugin_package.zip.sig`), so that is
+// the canonical artifact and it is built into dist/.
+const STORE_PACKAGE_NAME = "plugin_package.zip";
+
+// A byte-identical copy also lives at the repo root and is committed, mirroring
 // burp-vigolium.jar, so it can be downloaded straight from the repository
 // without cloning or building.
 const PACKAGE_NAME = "caido-vigolium.zip";
@@ -38,15 +43,24 @@ for (const plugin of manifest.plugins) {
 fs.copyFileSync(manifestPath, path.join(DIST, "manifest.json"));
 console.log("[*] Copied manifest.json");
 
+const storeZipPath = path.join(DIST, STORE_PACKAGE_NAME);
 const zipPath = path.join(ROOT, PACKAGE_NAME);
 // `zip` appends to an existing archive, so a stale entry from a previous build
 // would otherwise survive into the new package.
-if (fs.existsSync(zipPath)) fs.rmSync(zipPath);
+for (const stale of [storeZipPath, zipPath]) {
+  if (fs.existsSync(stale)) fs.rmSync(stale);
+}
 
-execFileSync("zip", ["-qr", zipPath, "manifest.json", "backend", "frontend"], {
+execFileSync("zip", ["-qr", storeZipPath, "manifest.json", "backend", "frontend"], {
   cwd: DIST,
   stdio: "inherit",
 });
 
-const { size } = fs.statSync(zipPath);
-console.log(`[+] ${PACKAGE_NAME} (${(size / 1024).toFixed(1)} KiB) - v${manifest.version}`);
+// The root package is a copy rather than a second `zip` run so the file users
+// download is bit-for-bit the archive that was signed for the store.
+fs.copyFileSync(storeZipPath, zipPath);
+
+const { size } = fs.statSync(storeZipPath);
+const kib = (size / 1024).toFixed(1);
+console.log(`[+] dist/${STORE_PACKAGE_NAME} (${kib} KiB) - v${manifest.version}`);
+console.log(`[+] ${PACKAGE_NAME} (${kib} KiB) - copy of dist/${STORE_PACKAGE_NAME}`);

@@ -48,4 +48,3 @@ export function toLatin1(bytes: Uint8Array, maxBytes?: number): string {
 export function fromLatin1(value: string): Uint8Array {
   return new Uint8Array(Buffer.from(value, "latin1"));
 }
-

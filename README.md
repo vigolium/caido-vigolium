@@ -19,8 +19,8 @@ the same value, so use whichever matches the proxy you are pointing at.
 
 ## Screenshots
 
-| Vigolium Caido Plugin 1 | Vigolium Caido Plugin 2 |
-|:---:|:---:|
+|                                                     Vigolium Caido Plugin 1                                                     |                                                     Vigolium Caido Plugin 2                                                     |
+| :-----------------------------------------------------------------------------------------------------------------------------: | :-----------------------------------------------------------------------------------------------------------------------------: |
 | ![Vigolium Caido Plugin 1](https://github.com/vigolium/docs/blob/main/images/caido-plugin/vigolium-caido-plugin-1.png?raw=true) | ![Vigolium Caido Plugin 2](https://github.com/vigolium/docs/blob/main/images/caido-plugin/vigolium-caido-plugin-2.png?raw=true) |
 | ![Vigolium Caido Plugin 3](https://github.com/vigolium/docs/blob/main/images/caido-plugin/vigolium-caido-plugin-3.png?raw=true) | ![Vigolium Caido Plugin 4](https://github.com/vigolium/docs/blob/main/images/caido-plugin/vigolium-caido-plugin-4.png?raw=true) |
 
@@ -59,22 +59,22 @@ Vigolium CLI/server ◄── loopback live bridge ──► Caido traffic / Sit
 
 | Tab              | Purpose                                                                       |
 | ---------------- | ----------------------------------------------------------------------------- |
-| **Findings**     | Searchable findings, evidence tabs, request/response editors, Markdown copy     |
-| **HTTP Records** | Filterable request/response records synchronized with Vigolium                  |
-| **Scanning**     | Native and agentic scan history, pagination, and scan logs                      |
-| **Bridge**       | Sitemap snapshots, the live loopback listener, Proxy forwarding, filter rules    |
-| **Settings**     | Server connection, scan options, request statistics, hotkey reference           |
-| **Logs**         | Timestamped activity log (INFO/WARN/ERROR)                                      |
+| **Findings**     | Searchable findings, evidence tabs, request/response editors, Markdown copy   |
+| **HTTP Records** | Filterable request/response records synchronized with Vigolium                |
+| **Scanning**     | Native and agentic scan history, pagination, and scan logs                    |
+| **Bridge**       | Sitemap snapshots, the live loopback listener, Proxy forwarding, filter rules |
+| **Settings**     | Server connection, scan options, request statistics, hotkey reference         |
+| **Logs**         | Timestamped activity log (INFO/WARN/ERROR)                                    |
 
 ## Tech Stack
 
-| Component  | Choice                                    |
-| ---------- | ----------------------------------------- |
-| Caido API  | `@caido/sdk-backend` / `@caido/sdk-frontend` |
-| Runtime    | LLRT (QuickJS) backend, Vue 3 frontend    |
-| UI         | Vue 3 + PrimeVue                          |
-| Build      | Vite + pnpm workspaces                    |
-| Tests      | Vitest                                    |
+| Component | Choice                                       |
+| --------- | -------------------------------------------- |
+| Caido API | `@caido/sdk-backend` / `@caido/sdk-frontend` |
+| Runtime   | LLRT (QuickJS) backend, Vue 3 frontend       |
+| UI        | Vue 3 + PrimeVue                             |
+| Build     | Vite + pnpm workspaces                       |
+| Tests     | Vitest                                       |
 
 ## Installation
 
@@ -98,9 +98,14 @@ pnpm test           # unit tests
 pnpm typecheck
 ```
 
-`pnpm build` writes the installable package to `caido-vigolium.zip` in the repository root - the
-same file linked above - with intermediate output under `dist/`. `pnpm clean` removes `dist/` and
-leaves the package in place.
+`pnpm build` writes the installable package to `dist/plugin_package.zip` - the name the Caido store
+requires - and copies it byte-for-byte to `caido-vigolium.zip` in the repository root, the same file
+linked above. `pnpm clean` removes `dist/` and leaves the root package in place.
+
+Releases are cut by the **Release** workflow under the repository's Actions tab. It builds the
+package, signs it with an Ed25519 key held in the `PRIVATE_KEY` Actions secret, and publishes
+`plugin_package.zip` alongside its detached `plugin_package.zip.sig` to an immutable GitHub release
+tagged with the `manifest.json` version.
 
 ### Reinstalling during development
 
@@ -111,8 +116,8 @@ an existing package with the same manifest id replaces it in place.
 For a faster loop, install Caido's official **DevTools** plugin ("Hot-reloading for faster Caido
 plugin development") from the Plugins → Official tab.
 
-Note that a frontend plugin is enabled **per user**. After installing, check that both *Vigolium* and
-*Vigolium Backend* are ticked under Plugins → Installed, then reload the window - the frontend script
+Note that a frontend plugin is enabled **per user**. After installing, check that both _Vigolium_ and
+_Vigolium Backend_ are ticked under Plugins → Installed, then reload the window - the frontend script
 is only evaluated on a full page load.
 
 ## Configuration
@@ -265,15 +270,15 @@ the Sitemap.
 
 #### Bridge endpoints
 
-| Method | Bridge endpoint                   | Purpose                                                          |
-| ------ | --------------------------------- | ---------------------------------------------------------------- |
-| `GET`  | `/health`                         | Report listener health, capabilities, scope mode, active project  |
-| `POST` | `/api/burp-bridge/search`         | Search the project's traffic                                      |
-| `POST` | `/api/burp-bridge/inspect`        | Retrieve request/response data for a temporary search reference   |
-| `POST` | `/api/burp-bridge/sitemap`        | Add a Base64-encoded request/response item to Caido's Sitemap     |
-| `POST` | `/api/burp-bridge/repeater`       | Open a Base64-encoded request (or a search `ref`) in Caido Replay |
-| `POST` | `/api/burp-bridge/send`           | Issue a request through Caido's HTTP stack and return the response |
-| `POST` | `/api/burp-bridge/organizer`      | Store a request + response pair in a named Replay collection      |
+| Method | Bridge endpoint              | Purpose                                                            |
+| ------ | ---------------------------- | ------------------------------------------------------------------ |
+| `GET`  | `/health`                    | Report listener health, capabilities, scope mode, active project   |
+| `POST` | `/api/burp-bridge/search`    | Search the project's traffic                                       |
+| `POST` | `/api/burp-bridge/inspect`   | Retrieve request/response data for a temporary search reference    |
+| `POST` | `/api/burp-bridge/sitemap`   | Add a Base64-encoded request/response item to Caido's Sitemap      |
+| `POST` | `/api/burp-bridge/repeater`  | Open a Base64-encoded request (or a search `ref`) in Caido Replay  |
+| `POST` | `/api/burp-bridge/send`      | Issue a request through Caido's HTTP stack and return the response |
+| `POST` | `/api/burp-bridge/organizer` | Store a request + response pair in a named Replay collection       |
 
 The endpoint paths keep the `burp-bridge` prefix so no CLI change is required.
 
@@ -317,18 +322,18 @@ wrong again:
 Behaviour is matched wherever Caido allows it. Where it cannot be, the plugin picks the closest
 equivalent rather than pretending:
 
-| Burp                              | Caido                                                                 |
-| --------------------------------- | --------------------------------------------------------------------- |
+| Burp                                     | Caido                                                             |
+| ---------------------------------------- | ----------------------------------------------------------------- |
 | Organizer (flat list, notes + highlight) | Named **Replay collection** - `notes` becomes the collection name |
-| Repeater tab                      | Replay session, renamed to `tab_name`                                  |
-| `http_mode` negotiation           | Validated and echoed, but Caido's raw send is always HTTP/1.1          |
-| Target Site map                   | Caido Sitemap, backed by the project's request store                   |
-| One global session                | Per-project traffic (see **Caido projects** above)                     |
+| Repeater tab                             | Replay session, renamed to `tab_name`                             |
+| `http_mode` negotiation                  | Validated and echoed, but Caido's raw send is always HTTP/1.1     |
+| Target Site map                          | Caido Sitemap, backed by the project's request store              |
+| One global session                       | Per-project traffic (see **Caido projects** above)                |
 
 ## API endpoints used by the plugin
 
-| Method | Endpoint                     | Description                                       |
-| ------ | ---------------------------- | ------------------------------------------------- |
+| Method | Endpoint                     | Description                                        |
+| ------ | ---------------------------- | -------------------------------------------------- |
 | `GET`  | `/health`                    | Test the Vigolium server connection                |
 | `POST` | `/api/ingest-http`           | Store selected or automatically forwarded traffic  |
 | `POST` | `/api/scan-request`          | Start a native scan for selected traffic           |
@@ -343,6 +348,38 @@ equivalent rather than pretending:
 
 All Vigolium API requests use `Authorization: Bearer {API_KEY}`.
 
+## External services and data handling
+
+This plugin is a client for **Vigolium**, a scanning engine you run yourself. The disclosures below
+are provided per the [Caido developer policy](https://developer.caido.io/policy.html).
+
+- **A Vigolium server is required.** The plugin does nothing on its own: every scan, ingestion, and
+  findings view is served by a Vigolium instance that **you** start and operate, by default at
+  `http://127.0.0.1:9002`. See [Configuration](#configuration).
+- **Where your traffic goes.** HTTP requests and responses you dispatch - explicitly, through Proxy
+  Mode, or via a Sitemap snapshot - are sent to whichever **Server URL** you configure, using the
+  endpoints listed in [API endpoints used by the plugin](#api-endpoints-used-by-the-plugin). Nothing
+  is sent anywhere else. If you point the plugin at a remote server, your traffic leaves your
+  machine and is stored by that server; with the default loopback URL it does not.
+- **No Vigolium account and no payment.** There is no Vigolium-operated cloud service, sign-up, or
+  paid tier involved. The API key is generated by your own server
+  (`vigolium config ls server.auth_api_key --force`) and is stored in the plugin's SQLite database
+  in Caido Data.
+- **No telemetry and no ads.** The plugin collects no analytics, sends no usage or crash data to
+  anyone, and displays no advertising.
+- **No remote assets and no self-updating.** All code ships inside the plugin package. The only
+  externally hosted content referenced by this project is the screenshot images in this README,
+  which are fetched by GitHub when rendering the page, not by the plugin. Updates are installed by
+  you through Caido.
+- **The live bridge is loopback-only.** The bridge listener that lets the Vigolium CLI and server
+  query Caido binds to loopback addresses only and refuses non-loopback bindings. See
+  [Live bridge](#live-bridge).
+- **Open source.** The plugin contains no closed-source or obfuscated components; the published
+  package is built from this repository by the workflow described in
+  [Build (from source)](#build-from-source).
+
 ## License
+
+Released under the [MIT License](LICENSE).
 
 Vigolium is made with ♥ by [@j3ssie](https://twitter.com/j3ssie)

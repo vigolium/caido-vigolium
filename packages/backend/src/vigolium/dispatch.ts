@@ -1,5 +1,10 @@
 import type { SDK } from "caido:plugin";
-import { errorMessage, type DispatchKind, type RawDispatchInput } from "shared";
+import {
+  SERVER_NOT_CONFIGURED_MESSAGE,
+  errorMessage,
+  type DispatchKind,
+  type RawDispatchInput,
+} from "shared";
 import type { LogService } from "../logging";
 import type { RequestCounters } from "../counters";
 import { blankToNull, type SettingsStore } from "../settings";
@@ -125,7 +130,7 @@ export class DispatchService {
 
   #configured(source: string): boolean {
     if (this.#api.isConfigured()) return true;
-    this.#log.error(`[${source}] Skipped: Vigolium server URL is not configured`);
+    this.#log.error(`[${source}] Skipped: ${SERVER_NOT_CONFIGURED_MESSAGE}`);
     return false;
   }
 

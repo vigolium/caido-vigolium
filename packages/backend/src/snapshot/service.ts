@@ -4,6 +4,7 @@ import type { SDK } from "caido:plugin";
 import type { Request, Response } from "caido:utils";
 import {
   EVENT_SNAPSHOT_STATUS,
+  SERVER_NOT_CONFIGURED_MESSAGE,
   errorMessage,
   type SnapshotStatus,
   type VigoliumSettings,
@@ -103,7 +104,7 @@ export class SnapshotService {
 
     try {
       if (!this.#api.isConfigured()) {
-        throw new Error("Vigolium server URL is not configured");
+        throw new Error(SERVER_NOT_CONFIGURED_MESSAGE);
       }
       await this.#resetCacheIfDestinationChanged();
 

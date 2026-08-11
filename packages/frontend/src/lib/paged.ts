@@ -1,5 +1,6 @@
 import { ref, type Ref } from "vue";
-import { errorMessage, type Page } from "shared";
+import { type Page } from "shared";
+import { displayError } from "./error-text";
 
 /** Server-side sort, as the Vigolium API spells it. */
 export type SortState = { field: string; order: string };
@@ -39,7 +40,7 @@ export function usePagedList<T>(fetchPage: (query: PageQuery) => Promise<Page<T>
       total.value = page.total;
       hasMore.value = page.hasMore;
     } catch (e) {
-      error.value = errorMessage(e);
+      error.value = displayError(e);
       items.value = [];
     } finally {
       loading.value = false;

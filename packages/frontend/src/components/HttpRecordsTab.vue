@@ -15,6 +15,7 @@ import { usePagedList } from "../lib/paged";
 import { usePageHotkey } from "../lib/page-hotkey";
 import { useRowActions } from "../lib/row-actions";
 import { formatHotkey, replayHotkey } from "../lib/platform";
+import FailureMessage from "./FailureMessage.vue";
 import HttpMessageView from "./HttpMessageView.vue";
 import PageToolbar from "./PageToolbar.vue";
 
@@ -213,7 +214,7 @@ onMounted(page.load);
       @update:limit="page.setLimit"
     />
 
-    <p v-if="error" class="vg-error">{{ error }}</p>
+    <FailureMessage v-if="error" :message="error" />
     <p v-else-if="notice" class="vg-notice">{{ notice }}</p>
 
     <Splitter layout="vertical" class="vg-splitter">

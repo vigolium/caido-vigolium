@@ -4,10 +4,12 @@ import InputText from "primevue/inputtext";
 import Password from "primevue/password";
 import Tag from "primevue/tag";
 import { computed, ref } from "vue";
-import { errorMessage, type Hotkeys } from "shared";
+import { type Hotkeys } from "shared";
+import { displayError } from "../lib/error-text";
 import { formatHotkey, paletteHotkey, platformHotkeys } from "../lib/platform";
 import { useSDK } from "../sdk";
 import { appState, resetStats, saveSettings } from "../stores/app";
+import FailureMessage from "./FailureMessage.vue";
 
 const sdk = useSDK();
 
@@ -16,9 +18,12 @@ const apiKey = ref(appState.settings.apiKey);
 const customModules = ref(appState.settings.customModules);
 const scanTimeout = ref(appState.settings.scanTimeout);
 
+// Both carry the outcome alongside the text: a failure rendered in the notice
+// colour reads as "it worked", which is exactly wrong when the message is that
+// the server could not be reached.
 const connectionState = ref<{ ok: boolean; message: string } | undefined>();
 const testing = ref(false);
-const scanAllState = ref("");
+const scanAllState = ref<{ ok: boolean; message: string } | undefined>();
 const scanAllRunning = ref(false);
 
 // The frontend SDK exposes the host's version, not the plugin's.
@@ -60,12 +65,12 @@ async function testConnection() {
 
 async function scanAll() {
   scanAllRunning.value = true;
-  scanAllState.value = "";
+  scanAllState.value = undefined;
   try {
     const scanId = await sdk.backend.scanAllRecords(customModules.value, scanTimeout.value);
-    scanAllState.value = `Scan started: ${scanId}`;
+    scanAllState.value = { ok: true, message: `Scan started: ${scanId}` };
   } catch (e) {
-    scanAllState.value = `Failed: ${errorMessage(e)}`;
+    scanAllState.value = { ok: false, message: displayError(e) };
   } finally {
     scanAllRunning.value = false;
   }
@@ -102,9 +107,8 @@ async function scanAll() {
         </label>
         <Button size="small" label="Test connection" :loading="testing" @click="testConnection" />
       </div>
-      <p v-if="connectionState" :class="connectionState.ok ? 'vg-notice' : 'vg-error'">
-        {{ connectionState.message }}
-      </p>
+      <p v-if="connectionState?.ok" class="vg-notice">{{ connectionState.message }}</p>
+      <FailureMessage v-else-if="connectionState" :message="connectionState.message" />
       <p class="vg-hint">
         Start the server with <code>vigolium server -A</code>, then read the key with
         <code>vigolium config ls server.auth_api_key --force</code>.
@@ -142,7 +146,8 @@ async function scanAll() {
           @click="scanAll"
         />
       </div>
-      <p v-if="scanAllState" class="vg-notice">{{ scanAllState }}</p>
+      <p v-if="scanAllState?.ok" class="vg-notice">{{ scanAllState.message }}</p>
+      <FailureMessage v-else-if="scanAllState" :message="scanAllState.message" />
     </section>
 
     <section class="vg-card">

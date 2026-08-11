@@ -1,9 +1,10 @@
 import { Classic } from "@caido/primevue";
 import PrimeVue from "primevue/config";
 import { createApp, type App as VueApp } from "vue";
-import { type DispatchKind, type Hotkeys } from "shared";
+import { isSetupGuidance, type DispatchKind, type Hotkeys } from "shared";
 import AppRoot from "./App.vue";
 import { resolveDispatchTargets, targetCount, type CommandContext } from "./lib/dispatch-target";
+import { displayError } from "./lib/error-text";
 import { platformHotkeys } from "./lib/platform";
 import { SDK_KEY } from "./sdk";
 import type { FrontendSDK } from "./types";
@@ -73,6 +74,16 @@ function errorDetail(e: unknown): string {
 }
 
 /**
+ * The tone a failed operation announces itself in.
+ *
+ * A setup step nobody has taken yet is not a fault, and a toast is the one place
+ * the plugin interrupts to say so - see `isSetupGuidance`.
+ */
+function failureVariant(message: string): "warning" | "error" {
+  return isSetupGuidance(message) ? "warning" : "error";
+}
+
+/**
  * Runs a command body so a thrown error becomes visible.
  *
  * Caido invokes command callbacks without awaiting them, so an async throw is a
@@ -82,8 +93,9 @@ function errorDetail(e: unknown): string {
 function runGuarded(sdk: FrontendSDK, label: string, body: () => Promise<void>): void {
   void body().catch((e: unknown) => {
     console.error(`[Vigolium] ${label} failed:`, errorDetail(e));
-    sdk.window.showToast(`Vigolium: ${label} failed - ${String(e)}`.slice(0, 200), {
-      variant: "error",
+    const message = displayError(e);
+    sdk.window.showToast(`Vigolium: ${label} failed - ${message}`.slice(0, 200), {
+      variant: failureVariant(message),
     });
   });
 }
@@ -191,7 +203,7 @@ function registerCommands(sdk: FrontendSDK, app: MountedApp): void {
       runGuarded(sdk, "Snapshot Sitemap", async () => {
         const status = await sdk.backend.snapshotNow("Shortcut");
         sdk.window.showToast(`Vigolium snapshot: ${status.message}`, {
-          variant: status.state === "FAILED" ? "error" : "success",
+          variant: status.state === "FAILED" ? failureVariant(status.message) : "success",
         });
       }),
   );

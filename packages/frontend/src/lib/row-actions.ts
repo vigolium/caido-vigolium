@@ -1,5 +1,5 @@
 import { computed, ref, type Ref } from "vue";
-import { errorMessage } from "shared";
+import { displayError } from "./error-text";
 
 /**
  * Notice and failure state for the actions a record view offers on a row.
@@ -23,7 +23,7 @@ export function useRowActions(pageError: Ref<string>) {
     try {
       await action();
     } catch (e) {
-      actionError.value = errorMessage(e);
+      actionError.value = displayError(e);
     }
   }
 

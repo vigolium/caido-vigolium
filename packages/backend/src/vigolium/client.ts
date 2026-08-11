@@ -12,8 +12,10 @@ import {
   type ScanLogEntry,
   INGEST_SOURCE,
   INGEST_SOURCE_HEADER,
+  SERVER_NOT_CONFIGURED_MESSAGE,
   errorMessage,
   parseSeverity,
+  serverUnreachableMessage,
 } from "shared";
 import { pickBoolean, pickNumber, pickString, pickStringList, type Json } from "../util/json";
 
@@ -282,7 +284,7 @@ export class VigoliumApiClient {
 
   async #request(method: string, path: string, body?: unknown): Promise<string> {
     const { serverUrl, apiKey } = this.#credentials();
-    if (!serverUrl) throw new VigoliumApiError(0, "Vigolium server URL is not configured");
+    if (!serverUrl) throw new VigoliumApiError(0, SERVER_NOT_CONFIGURED_MESSAGE);
 
     const headers: Record<string, string> = {
       // Set on every call rather than only on the ingest path: it is advisory
@@ -301,6 +303,12 @@ export class VigoliumApiClient {
     }
 
     let lastError = "unknown error";
+    // Both kinds of failure are retried the same way, but they do not read the
+    // same way: a throw out of `fetch` means nothing answered, while a 5xx means
+    // the server answered badly. Only the first is fixed by starting the server,
+    // so which one it was is carried out of the loop rather than recovered later
+    // by string-matching whatever wording the transport happened to use.
+    let unreachable = false;
     for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
       if (attempt > 0) {
         await sleep(BACKOFF_MS[attempt - 1] ?? 2000);
@@ -318,12 +326,19 @@ export class VigoliumApiClient {
           );
         }
         lastError = `Server error: ${response.status} - ${text.trim()}`;
+        unreachable = false;
       } catch (e) {
         if (e instanceof VigoliumApiError) throw e;
         lastError = errorMessage(e);
+        unreachable = true;
       }
     }
-    throw new VigoliumApiError(0, `Request failed after ${MAX_RETRIES} retries: ${lastError}`);
+    throw new VigoliumApiError(
+      0,
+      unreachable
+        ? serverUnreachableMessage(serverUrl, lastError)
+        : `Request failed after ${MAX_RETRIES} retries: ${lastError}`,
+    );
   }
 }
 

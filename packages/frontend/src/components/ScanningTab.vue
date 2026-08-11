@@ -12,10 +12,12 @@ import TabPanels from "primevue/tabpanels";
 import TabPanel from "primevue/tabpanel";
 import Tag from "primevue/tag";
 import { computed, ref, watch, type Ref } from "vue";
-import { errorMessage, type AgentSession, type Scan, type ScanLogEntry } from "shared";
+import { type AgentSession, type Scan, type ScanLogEntry } from "shared";
 import { useSDK } from "../sdk";
+import { displayError } from "../lib/error-text";
 import { formatDuration, formatTimestamp, scanStatusSeverity } from "../lib/format";
 import { usePagedList } from "../lib/paged";
+import FailureMessage from "./FailureMessage.vue";
 import PageToolbar from "./PageToolbar.vue";
 
 const sdk = useSDK();
@@ -73,7 +75,7 @@ async function loadScanLogs() {
     const result = await sdk.backend.scanLogs(scan.uuid, logLevel.value, logPhase.value, 500, 0);
     scanLogs.value = result.logs;
   } catch (e) {
-    scanDetailError.value = errorMessage(e);
+    scanDetailError.value = displayError(e);
   }
 }
 
@@ -102,7 +104,7 @@ async function control(action: keyof typeof SCAN_ACTIONS) {
     }
     await scans.load();
   } catch (e) {
-    scanDetailError.value = errorMessage(e);
+    scanDetailError.value = displayError(e);
   }
 }
 
@@ -128,7 +130,7 @@ async function onSessionSelect(session: AgentSession) {
     sessionLogText.value = await sdk.backend.agentSessionLogs(session.uuid);
   } catch (e) {
     sessionLogText.value = "";
-    sessionDetailError.value = errorMessage(e);
+    sessionDetailError.value = displayError(e);
   }
 }
 
@@ -180,7 +182,7 @@ watch(activeTab, showTab, { immediate: true });
       </TabList>
       <TabPanels>
         <TabPanel value="native">
-          <p v-if="nativeError" class="vg-error">{{ nativeError }}</p>
+          <FailureMessage v-if="nativeError" :message="nativeError" />
           <PageToolbar
             :offset="scans.offset.value"
             :limit="scans.limit.value"
@@ -285,7 +287,7 @@ watch(activeTab, showTab, { immediate: true });
         </TabPanel>
 
         <TabPanel value="agentic">
-          <p v-if="agenticError" class="vg-error">{{ agenticError }}</p>
+          <FailureMessage v-if="agenticError" :message="agenticError" />
           <div class="vg-filters">
             <Select
               v-model="sessionMode"

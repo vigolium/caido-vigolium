@@ -450,6 +450,7 @@
 /* Messages ---------------------------------------------------------------- */
 
 .vg-error,
+.vg-warning,
 .vg-notice,
 .vg-hint {
   margin: 0;
@@ -458,6 +459,11 @@
 
 .vg-error {
   color: var(--c-danger, #d64545);
+}
+
+/* A setup step still to be taken - see `isSetupGuidance`. */
+.vg-warning {
+  color: var(--c-warning, #c98a2e);
 }
 
 .vg-notice {

@@ -5,7 +5,7 @@ resulting findings, and synchronizing traffic in both directions. It supports ex
 Caido, automatic Proxy forwarding, Sitemap snapshots, and an optional loopback-only live bridge for
 CLI and server integrations.
 
-- **Version:** `0.1.1`
+- **Version:** `0.1.2`
 - **GitHub:** [github.com/vigolium/vigolium](https://github.com/vigolium/vigolium)
 - **Docs:** [docs.vigolium.com](https://docs.vigolium.com/)
 - **Plugin guide:**

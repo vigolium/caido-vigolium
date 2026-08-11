@@ -1,7 +1,7 @@
 {
   "id": "vigolium",
   "name": "Vigolium",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Send Caido traffic to the Vigolium scanning engine, review findings, and bridge traffic in both directions with the Vigolium CLI and server.",
   "author": {
     "name": "Vigolium",

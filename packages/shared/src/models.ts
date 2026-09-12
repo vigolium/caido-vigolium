@@ -43,6 +43,16 @@ export type Finding = {
   id: number;
   httpRecordUuids: string[];
   scanUuid: string;
+  /**
+   * The target the finding was raised against, when it has one.
+   *
+   * Distinct from `matchedAt`, which is whatever the module chose to point at -
+   * a URL for a web module, a source file for an agent one. This is the server's
+   * own answer and is the reliable way to tell where a piece of evidence was
+   * sent; a finding with no HTTP target leaves it empty.
+   */
+  url: string;
+  hostname: string;
   moduleId: string;
   moduleName: string;
   description: string;

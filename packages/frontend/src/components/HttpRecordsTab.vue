@@ -57,6 +57,16 @@ const { notice, error, run } = useRowActions(page.error);
 const requestText = computed(() => decodeBase64ToText(selected.value?.rawRequestBase64 ?? ""));
 const responseText = computed(() => decodeBase64ToText(selected.value?.rawResponseBase64 ?? ""));
 
+/**
+ * Whether the open record has bytes to replay.
+ *
+ * Not every record keeps its raw request - an imported or truncated one may
+ * have none - and the backend can only refuse it. Offering the action anyway
+ * turns "this row has nothing to send" into a red error after the click, so the
+ * row itself answers the question instead.
+ */
+const canReplay = computed(() => (selected.value?.rawRequestBase64 ?? "") !== "");
+
 async function onSelect(record: HttpRecord) {
   selected.value = record;
   // The list endpoint omits raw bodies; fetch them only for the opened row.
@@ -77,7 +87,7 @@ async function scanSelected() {
 
 async function replaySelected() {
   const record = selected.value;
-  if (!record) return;
+  if (!record || !canReplay.value) return;
   await run(async () => {
     await sdk.backend.sendRecordToReplay(record.uuid);
     notice.value = "Opened in Replay";
@@ -112,7 +122,7 @@ const menuItems = computed(() => [
     // into the label - an unadvertised shortcut is one nobody finds.
     label: `Send to Replay  ${formatHotkey(replayHotkey())}`,
     icon: "fas fa-paper-plane",
-    disabled: !selected.value,
+    disabled: !canReplay.value,
     command: replaySelected,
   },
   {
@@ -145,7 +155,7 @@ function onDetailContextMenu(event: MouseEvent) {
 }
 
 usePageHotkey("r", root, () => {
-  if (!selected.value) return false;
+  if (!canReplay.value) return false;
   void replaySelected();
   return true;
 });
@@ -278,14 +288,33 @@ onMounted(page.load);
             </div>
             <div class="vg-detail__actions">
               <Button
+                class="vg-action"
                 size="small"
                 severity="secondary"
                 text
+                icon="fas fa-paper-plane"
                 label="Send to Replay"
+                :disabled="!canReplay"
                 @click="replaySelected"
               />
-              <Button size="small" severity="secondary" text label="Scan" @click="scanSelected" />
-              <Button size="small" severity="danger" text label="Delete" @click="deleteSelected" />
+              <Button
+                class="vg-action"
+                size="small"
+                severity="secondary"
+                text
+                icon="fas fa-shield-halved"
+                label="Scan"
+                @click="scanSelected"
+              />
+              <Button
+                class="vg-action vg-action--danger"
+                size="small"
+                severity="danger"
+                text
+                icon="fas fa-trash-can"
+                label="Delete"
+                @click="deleteSelected"
+              />
             </div>
           </div>
           <HttpMessageView

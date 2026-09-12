@@ -13,9 +13,10 @@ import TabList from "primevue/tablist";
 import Tab from "primevue/tab";
 import TabPanels from "primevue/tabpanels";
 import TabPanel from "primevue/tabpanel";
-import { computed, onMounted, ref } from "vue";
-import { SEVERITY_LABELS, parseEvidence, type Finding, type Severity } from "shared";
+import { computed, onMounted, ref, watch } from "vue";
+import { SEVERITY_LABELS, type Finding, type Severity } from "shared";
 import { useSDK } from "../sdk";
+import { evidencePanes, replayHint } from "../lib/evidence";
 import { SEVERITY_OPTIONS, formatTimestamp, severitySeverity } from "../lib/format";
 import { usePagedList } from "../lib/paged";
 import { usePageHotkey } from "../lib/page-hotkey";
@@ -62,23 +63,21 @@ const page = usePagedList<Finding>(({ limit, offset, sort }) =>
 const findings = page.items;
 const { notice, error, run } = useRowActions(page.error);
 
-/** Primary request/response plus each additional evidence pair, as tabs. */
-const evidencePanes = computed(() => {
-  const finding = selected.value;
-  if (!finding) return [];
-  const panes = [
-    { key: "primary", label: "Evidence", request: finding.request, response: finding.response },
-  ];
-  finding.additionalEvidence.forEach((raw, index) => {
-    const evidence = parseEvidence(raw);
-    panes.push({
-      key: `evidence-${index}`,
-      label: `Evidence #${index + 2}`,
-      request: evidence.request,
-      response: evidence.response,
-    });
-  });
-  return panes;
+/** Every request/response pair the finding actually carries, as tabs. */
+const panes = computed(() => evidencePanes(selected.value));
+
+/**
+ * Keeps the open tab on a pane that exists.
+ *
+ * The pane set is rebuilt when a row is opened and again a round trip later when
+ * its detail arrives, and it need not contain a "primary" pane at all. Naming a
+ * key that is not there leaves the tab strip with nothing active and the panel
+ * blank, so the first pane takes over whenever the selection goes stale.
+ */
+watch(panes, (current) => {
+  if (!current.some((pane) => pane.key === evidenceTab.value)) {
+    evidenceTab.value = current[0]?.key ?? "primary";
+  }
 });
 
 async function onSelect(finding: Finding) {
@@ -101,8 +100,7 @@ async function copyMarkdown() {
 
 /** The evidence pair on screen, which is what the copy items act on. */
 const activePane = computed(
-  () =>
-    evidencePanes.value.find((pane) => pane.key === evidenceTab.value) ?? evidencePanes.value[0],
+  () => panes.value.find((pane) => pane.key === evidenceTab.value) ?? panes.value[0],
 );
 
 async function deleteSelected() {
@@ -120,8 +118,8 @@ async function deleteSelected() {
  *
  * Evidence is raw text with no stored record behind it, so this goes through
  * the raw entry point rather than the by-uuid one the HTTP Records tab uses.
- * `matchedAt` is passed only as a hint: for an agent finding it is a source
- * file path, and the backend reconciles it against the message's own Host.
+ * The hint is passed only as a hint - see `replayHint` - and the backend
+ * reconciles it against the message's own Host header.
  */
 async function replaySelected() {
   const finding = selected.value;
@@ -129,7 +127,7 @@ async function replaySelected() {
   if (!finding || !pane?.request) return;
   await run(async () => {
     await sdk.backend.sendRawToReplay(
-      finding.matchedAt[0] ?? "",
+      replayHint(finding),
       pane.request,
       pane.response ?? "",
       `vigolium-${finding.moduleId || finding.moduleName || finding.id}`,
@@ -343,9 +341,11 @@ onMounted(page.load);
             </div>
             <div class="vg-detail__actions">
               <Button
+                class="vg-action"
                 size="small"
                 severity="secondary"
                 text
+                :icon="showDescription ? 'fas fa-eye-slash' : 'fas fa-eye'"
                 :label="showDescription ? 'Hide description' : 'Show description'"
                 @click="showDescription = !showDescription"
               />
@@ -357,18 +357,12 @@ onMounted(page.load);
             {{ selected.description }}
           </p>
 
-          <Tabs
-            v-if="evidencePanes.length > 1"
-            v-model:value="evidenceTab"
-            class="vg-evidence-tabs"
-          >
+          <Tabs v-if="panes.length > 1" v-model:value="evidenceTab" class="vg-evidence-tabs">
             <TabList>
-              <Tab v-for="pane in evidencePanes" :key="pane.key" :value="pane.key">{{
-                pane.label
-              }}</Tab>
+              <Tab v-for="pane in panes" :key="pane.key" :value="pane.key">{{ pane.label }}</Tab>
             </TabList>
             <TabPanels>
-              <TabPanel v-for="pane in evidencePanes" :key="pane.key" :value="pane.key">
+              <TabPanel v-for="pane in panes" :key="pane.key" :value="pane.key">
                 <HttpMessageView
                   :request="pane.request"
                   :response="pane.response"
@@ -377,13 +371,18 @@ onMounted(page.load);
               </TabPanel>
             </TabPanels>
           </Tabs>
-          <!-- One pane needs no tab strip, and it can only be the primary one. -->
+          <!-- A single pane needs no tab strip to choose between. -->
           <HttpMessageView
-            v-else-if="evidencePanes[0]"
-            :request="evidencePanes[0].request"
-            :response="evidencePanes[0].response"
+            v-else-if="panes[0]"
+            :request="panes[0].request"
+            :response="panes[0].response"
             @contextmenu="onEvidenceContextMenu"
           />
+          <!-- A code-audit finding carries no messages at all; say so rather than
+               leaving two empty editors that look like a failed load. -->
+          <div v-else class="vg-empty vg-empty--pane">
+            This finding carries no request or response.
+          </div>
         </div>
       </SplitterPanel>
     </Splitter>

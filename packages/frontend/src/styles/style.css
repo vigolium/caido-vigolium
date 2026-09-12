@@ -214,11 +214,102 @@
 .vg-detail__actions {
   display: flex;
   align-items: center;
-  gap: 0.25rem;
+  gap: 0.35rem;
+
+  /*
+   * The accent for the outlined actions below.
+   *
+   * Caido's own `--c-fg-info` would be the obvious token, but it resolves to
+   * `#88a2aa` - a slate that reads as grey rather than blue against the app's
+   * chrome, which is the opposite of making these buttons stand out. The value
+   * is stated here instead, and swapped rather than redefined per theme.
+   */
+  --vg-action-accent: #7ab8f5;
+  --vg-action-tint: rgba(122, 184, 245, 0.16);
+  --vg-action-tint-hover: rgba(122, 184, 245, 0.28);
 }
 
+/* A light background needs the darker end of the same blue to stay legible. */
+[data-mode="light"] .vg-detail__actions {
+  --vg-action-accent: #2f6fb0;
+  --vg-action-tint: rgba(47, 111, 176, 0.12);
+  --vg-action-tint-hover: rgba(47, 111, 176, 0.22);
+}
+
+/*
+ * The detail pane's own actions, outlined so they read as buttons.
+ *
+ * Left as the preset's borderless `text` variant they are indistinguishable
+ * from the metadata beside them, and the actions a record view offers are the
+ * whole point of opening a row. The tint comes from Caido's own `info` token
+ * rather than a colour of ours, so it follows the host theme - and it is the
+ * one semantic colour the surrounding UI does not already spend on state
+ * (amber for primary, red for danger, green for success).
+ *
+ * Two classes deep to outrank the preset's Tailwind utilities, which are single
+ * class selectors; its hover rules are `.hover\:bg-x:hover`, so the hover rule
+ * below needs the same treatment to win.
+ */
+.vg-detail__actions .vg-action {
+  gap: 0.4rem;
+  padding: 0.2rem 0.65rem;
+  color: var(--vg-action-accent);
+  border: 1px solid var(--vg-action-accent);
+  border-radius: 4px;
+  background: var(--vg-action-tint);
+}
+
+/*
+ * The preset spaces the icon with `mr-2` on top of the root's `gap-2`, which
+ * leaves the icon adrift from its own label once the button has a border to
+ * sit inside. The flex gap above is the only spacing wanted.
+ */
+.vg-detail__actions .vg-action [data-pc-section="icon"] {
+  margin: 0;
+}
+
+.vg-detail__actions .vg-action:not(:disabled):hover {
+  color: var(--vg-action-accent);
+  background: var(--vg-action-tint-hover);
+}
+
+/*
+ * Delete keeps the warning in its label and icon.
+ *
+ * The outline is what makes the action findable; the colour is what stops it
+ * being clicked by accident, and a destructive action that looks like every
+ * other one has given that up.
+ */
+.vg-detail__actions .vg-action--danger,
+.vg-detail__actions .vg-action--danger:not(:disabled):hover {
+  color: var(--c-fg-danger, #d64545);
+}
+
+.vg-detail__actions .vg-action:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/*
+ * The description scrolls itself rather than growing the pane.
+ *
+ * `min-height: 0` is load-bearing again here: left at the flex default of
+ * `auto`, a long description refuses to shrink, and since the splitter panel
+ * around it is `overflow: hidden` the excess is not scrollable either - it
+ * simply shoves the request and response editors out of the pane and clips
+ * them, with no scrollbar anywhere to reach them. Collapsing the description
+ * was the only way back, which is how this was reported.
+ *
+ * The cap is a share of the pane rather than a fixed height so a short
+ * description still takes only the room it needs. `.vg-detail` is sized by the
+ * splitter, so the percentage has something definite to resolve against.
+ */
 .vg-detail__description {
   margin: 0;
+  flex: 0 1 auto;
+  min-height: 0;
+  max-height: 40%;
+  overflow-y: auto;
   padding: 0.5rem 0.75rem;
   border-radius: 4px;
   background: var(--c-bg-subtle, rgba(127, 127, 127, 0.08));

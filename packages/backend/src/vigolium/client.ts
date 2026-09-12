@@ -389,6 +389,8 @@ function parseFinding(json: Json): Finding {
     id: pickNumber(json, "id", 0),
     httpRecordUuids: pickStringList(json, "http_record_uuids"),
     scanUuid: pickString(json, "scan_uuid", ""),
+    url: pickString(json, "url", ""),
+    hostname: pickString(json, "hostname", ""),
     moduleId: pickString(json, "module_id", ""),
     moduleName: pickString(json, "module_name", ""),
     description: pickString(json, "description", ""),
